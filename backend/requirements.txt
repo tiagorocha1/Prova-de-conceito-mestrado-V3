@@ -9,3 +9,11 @@ tf-keras
 numpy<2
 python-dotenv
 pytest
+mediapipe
+dlib 
+opencv-python
+
+#pip install protobuf==3.20.1
+#$env:PROTOCOL_BUFFERS_PYTHON_IMPLEMENTATION="python"
+#pip install protobuf==3.20.3
+
