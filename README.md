@@ -1,17 +1,17 @@
 # FacePresenceTracker - Projeto Full-Stack
 
-FacePresenceTracker é uma aplicação de reconhecimento facial que utiliza a webcam para capturar imagens, detectar faces e registrar presenças no backend. O projeto é composto por dois diretórios principais:
+FacePresenceTracker é uma aplicação de reconhecimento facial que utiliza a webcam para capturar frames, os quais são enviados a cada segundo para o backend. No backend é realizada a detecção das faces e o reconhecimento, registrando as presenças. O projeto é composto por dois diretórios principais:
 
-- **frontend/**: Contém o aplicativo React que gerencia a captura, a detecção facial em tempo real e a visualização dos registros.
-- **backend/**: Contém o serviço FastAPI que processa as imagens, realiza o reconhecimento utilizando a biblioteca DeepFace e gerencia o armazenamento dos registros de pessoas e presenças em um banco de dados MongoDB.
+- **frontend/**: Contém o aplicativo React que gerencia a captura dos frames da webcam e a visualização dos registros.
+- **backend/**: Contém o serviço FastAPI que processa os frames recebidos, realiza a detecção de faces utilizando a biblioteca dlib, executa o reconhecimento com DeepFace e gerencia o armazenamento dos registros de pessoas e presenças em um banco de dados MongoDB.
 
 ---
 
 ## Funcionalidades Gerais
 
-- **Detecção Facial em Tempo Real:**  
-  O frontend utiliza a biblioteca [MediaPipe Face Detection](https://github.com/google/mediapipe) para capturar e detectar faces em tempo real a partir da webcam.  
-  - Possui um botão para iniciar/parar a detecção.
+- **Envio de Frames e Detecção no Backend:**  
+  O frontend captura frames da webcam a cada segundo e os envia de forma assíncrona para o backend.  
+  - No backend, a detecção de faces é realizada utilizando dlib, permitindo o recorte e o processamento individual de cada face.
 
 - **Reconhecimento e Cadastro:**  
   Ao detectar uma face, o backend utiliza o [DeepFace](https://github.com/serengil/deepface) para comparar a face capturada com as já cadastradas.  
@@ -35,8 +35,8 @@ FacePresenceTracker é uma aplicação de reconhecimento facial que utiliza a we
   - Listar e deletar registros de presença filtrados pela data atual (tabela paginada);
   - Remover fotos específicas de um registro de pessoa.
 
-- **Atualização Assíncrona:**  
-  O envio das imagens para o backend é feito de forma assíncrona, sem bloquear o fluxo principal da detecção.
+- **Processamento Assíncrono:**  
+  O envio dos frames do frontend para o backend é realizado de forma assíncrona, garantindo que a detecção e o reconhecimento ocorram sem interromper a captura contínua dos frames.
 
 ---
 
@@ -64,14 +64,13 @@ FacePresenceTracker é uma aplicação de reconhecimento facial que utiliza a we
 
 ### Frontend
 - **React**: Biblioteca para construção de interfaces dinâmicas.
-- **MediaPipe Face Detection**: Para detecção de faces em tempo real.
-- **Camera Utils (MediaPipe)**: Facilita a integração com a webcam.
 - **React Router**: Para gerenciamento de rotas na aplicação.
 - **React Modal**: Para exibição de modais (ex.: listagem de fotos).
 - **Fetch API**: Para comunicação com o backend.
 
 ### Backend
 - **FastAPI**: Framework para criação de APIs REST de alta performance.
+- **dlib:** Utilizado para a detecção de faces nos frames enviados.
 - **DeepFace**: Biblioteca para reconhecimento facial (usando modelos como Facenet512).
 - **MongoDB**: Banco de dados NoSQL para armazenamento dos registros de pessoas e presenças.
 - **Pillow (PIL)**: Para processamento e manipulação de imagens.
