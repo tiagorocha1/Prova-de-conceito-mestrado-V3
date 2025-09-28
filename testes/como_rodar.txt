@@ -1,0 +1,8 @@
+python -m venv .venv
+pip install opencv-python pillow requests
+python desktop_sender.py video.mp4
+
+#python desktop_sender.py C:\Users\tiago\OneDrive\Documentos\Mestrado\Dataset\1minuto\ENTRADA\A01-ENTRADA.avi
+
+
+#python desktop_senderV2.py "C:\Users\tiago\OneDrive\Documentos\Mestrado\Dataset\1minuto\ENTRADA\\A01-ENTRADA.avi" --jpeg --quality 80 --timeout 60 --min-interval-ms 1500 --skip 2

@@ -43,11 +43,9 @@ quantidade_fotos_relacionadas = 1000
 # ----------------------------
 # Inicialização do detector dlib
 # ----------------------------
-#import dlib
+import dlib
 import cv2  # Necessário para conversão para escala de cinza
-import mediapipe as mp
-import numpy as np
-#detector = dlib.get_frontal_face_detector()
+detector = dlib.get_frontal_face_detector()
 
 # ----------------------------
 # FastAPI App and Middleware
@@ -80,59 +78,6 @@ class FaceItem(BaseModel):
 
 class BatchImagePayload(BaseModel):
     images: List[FaceItem]
-
-# ----------------------------
-# MediaPipe Face Detection (substitui dlib)
-# ----------------------------
-mp_face = mp.solutions.face_detection
-
-# Crie uma função utilitária para converter o bounding box relativo do MediaPipe
-# em coordenadas absolutas (x_min, y_min, x_max, y_max)
-def _mp_bbox_to_abs(image_width: int, image_height: int, relative_bbox) -> tuple[int, int, int, int]:
-    x_min = int(relative_bbox.xmin * image_width)
-    y_min = int(relative_bbox.ymin * image_height)
-    w     = int(relative_bbox.width * image_width)
-    h     = int(relative_bbox.height * image_height)
-    x_max = x_min + w
-    y_max = y_min + h
-
-    # clamp para dentro da imagem
-    x_min = max(0, x_min)
-    y_min = max(0, y_min)
-    x_max = min(image_width - 1, x_max)
-    y_max = min(image_height - 1, y_max)
-    return x_min, y_min, x_max, y_max
-
-
-def detect_faces_mediapipe(image_np_rgb: np.ndarray,
-                           min_conf: float = 0.8,
-                           model_selection: int = 1):
-    """
-    Executa a detecção de faces com MediaPipe FaceDetection.
-    - image_np_rgb deve estar em RGB
-    - model_selection: 0 (faces próximas) | 1 (distantes)
-    Retorna lista de boxes absolutos (x_min, y_min, x_max, y_max).
-    """
-    # Cria e fecha o detector a cada chamada (thread-safe no FastAPI)
-    with mp_face.FaceDetection(model_selection=model_selection,
-                               min_detection_confidence=min_conf) as face_det:
-        results = face_det.process(image_np_rgb)
-
-    boxes = []
-    if results and results.detections:
-        h, w, _ = image_np_rgb.shape
-        for det in results.detections:
-            rel_bbox = det.location_data.relative_bounding_box
-            x_min, y_min, x_max, y_max = _mp_bbox_to_abs(w, h, rel_bbox)
-            # (Opcional) adicionar uma margem ao redor da face (ex.: 10%)
-            margin = int(0.10 * max(x_max - x_min, y_max - y_min))
-            x_min = max(0, x_min - margin)
-            y_min = max(0, y_min - margin)
-            x_max = min(w - 1, x_max + margin)
-            y_max = min(h - 1, y_max + margin)
-            boxes.append((x_min, y_min, x_max, y_max))
-    return boxes
-
 
 # ----------------------------
 # Função interna de reconhecimento
@@ -230,9 +175,6 @@ def process_face(image: Image.Image, start_time: datetime = None) -> dict:
         "primary_photo": primary_photo
     }
 
-
-
-
 # ----------------------------
 # Endpoints
 # --------------------------
@@ -304,21 +246,28 @@ async def detect_and_recognize(payload: ImagePayload):
 
         image = image.resize((1344, 760))
 
-        # Converte a imagem para array RGB (MediaPipe lê RGB)
-        image_np = np.array(image)  # já está RGB por causa do .convert("RGB") lá em cima
+        # Converte a imagem para array para o dlib
+        import numpy as np
+        image_np = np.array(image)
 
-        # Detecta faces com MediaPipe
-        boxes = detect_faces_mediapipe(image_np, min_conf=0.5, model_selection=1)
+        # Converte a imagem para escala de cinza (melhora a detecção com dlib)
+        gray = cv2.cvtColor(image_np, cv2.COLOR_RGB2GRAY)
+        faces = detector(gray)
 
-        if not boxes:
+        if len(faces) == 0:
             return JSONResponse({"faces": []}, status_code=200)
 
         faces_results = []
-        for (x_min, y_min, x_max, y_max) in boxes:
+        for rect in faces:
+            # Registra o início do processamento para esta face
             start_time = datetime.now()
-            # Recorta a face a partir do bounding box
+            x_min = rect.left()
+            y_min = rect.top()
+            x_max = rect.right()
+            y_max = rect.bottom()
+            # Recorta a face a partir das coordenadas obtidas
             face_image = image.crop((x_min, y_min, x_max, y_max))
-            # Reaproveita seu pipeline de reconhecimento/registro
+            # Processa o reconhecimento para a face recortada, passando o start_time
             result_face = process_face(face_image, start_time=start_time)
             faces_results.append(result_face)
 

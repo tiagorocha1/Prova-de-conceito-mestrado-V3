@@ -308,7 +308,7 @@ async def detect_and_recognize(payload: ImagePayload):
         image_np = np.array(image)  # já está RGB por causa do .convert("RGB") lá em cima
 
         # Detecta faces com MediaPipe
-        boxes = detect_faces_mediapipe(image_np, min_conf=0.5, model_selection=1)
+        boxes = detect_faces_mediapipe(image_np, min_conf=0.8, model_selection=1)
 
         if not boxes:
             return JSONResponse({"faces": []}, status_code=200)

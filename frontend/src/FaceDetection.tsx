@@ -8,6 +8,34 @@ function FaceDetectionComponent() {
   const cameraRef = useRef<Camera | null>(null);
   const throttleInterval = 1000; // Envia 1 frame a cada 1000 ms (1 segundo)
   const lastSentTimeRef = useRef<number>(0);
+  // Adição para upload de vídeo
+  const [useVideoFile, setUseVideoFile] = useState(false);
+  const [videoFile, setVideoFile] = useState<File | null>(null);
+
+  const handleVideoFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    if (e.target.files && e.target.files[0]) {
+      setVideoFile(e.target.files[0]);
+      setUseVideoFile(true);
+    }
+  };
+
+  const sendVideoFile = async () => {
+    if (!videoFile) return;
+    const formData = new FormData();
+    formData.append('video', videoFile);
+
+    try {
+      const response = await fetch('http://localhost:8000/process-video', {
+        method: 'POST',
+        body: formData,
+      });
+      const result = await response.json();
+      console.log('Resultado do processamento:', result);
+      // Aqui você pode exibir o resultado para o usuário
+    } catch (error) {
+      console.error('Erro ao enviar vídeo:', error);
+    }
+  };
 
   // Configura a câmera para capturar os frames
   useEffect(() => {
@@ -71,7 +99,7 @@ function FaceDetectionComponent() {
 
   return (
     <div style={{ textAlign: 'center' }}>
-      <div style={{ margin: '0 auto', maxWidth: '640px', position: 'relative' }}>
+      <div style={{ margin: '0 auto', maxWidth: '1024px', position: 'relative' }}>
         <video
           ref={videoRef}
           style={{ width: '100%' }}
@@ -95,6 +123,20 @@ function FaceDetectionComponent() {
           }}
         >
           {isDetecting ? 'Parar Detecção' : 'Iniciar Detecção'}
+        </button>
+        <label>
+          <input
+            type="checkbox"
+            checked={useVideoFile}
+            onChange={() => setUseVideoFile((prev) => !prev)}
+          />
+          Usar vídeo
+        </label>
+        {useVideoFile && (
+          <input type="file" accept="video/mp4,video/webm,video/ogg" onChange={handleVideoFileChange} />
+        )}
+        <button onClick={sendVideoFile} disabled={!videoFile}>
+          Enviar vídeo para processamento
         </button>
       </div>
     </div>

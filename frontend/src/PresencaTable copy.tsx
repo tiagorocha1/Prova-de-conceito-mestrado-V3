@@ -1,20 +1,15 @@
 import React, { useEffect, useState, useCallback } from "react";
 
 interface Presenca {
-  id: string;                 // _id do MongoDB convertido p/ string
+  id: string; // _id do MongoDB convertido para string
   uuid: string;
   data: string;
   hora: string;
   foto_captura: string;
   tags: string[];
-  // No backend atual "inicio" e "fim" são strings (ex: "2025-09-28 12:34:56.123456")
-  inicio: string;
-  fim: string;
-  tempo_processamento: number;        // em ms
-  // Campos novos (opcionais), se você já instrumentou o backend:
-  t_captura_ms_frame?: number;        // em ms
-  t_deteccao_ms_frame?: number;       // em ms
-  t_reconhecimento_ms?: number;       // em ms (por face)
+  inicio: number;              // Timestamp de início (em milissegundos)
+  fim: number;                 // Timestamp de fim (em milissegundos)
+  tempo_processamento: number; // Tempo de processamento (em milissegundos)
 }
 
 const PresencaTable: React.FC = () => {
@@ -22,31 +17,26 @@ const PresencaTable: React.FC = () => {
   const [total, setTotal] = useState<number>(0);
   const [page, setPage] = useState<number>(1);
   const [loading, setLoading] = useState<boolean>(false);
-  const limit = 100000;
+  const limit = 10; // Número de registros por página
 
-  // data local YYYY-MM-DD
+  // Obtém a data local no formato YYYY-MM-DD
   const todayDate = new Date();
-  const localDate = `${todayDate.getFullYear()}-${("0" + (todayDate.getMonth() + 1)).slice(-2)}-${(
-    "0" + todayDate.getDate()
-  ).slice(-2)}`;
+  const localDate = `${todayDate.getFullYear()}-${("0" + (todayDate.getMonth() + 1)).slice(-2)}-${("0" + todayDate.getDate()).slice(-2)}`;
 
-  const fetchPresencas = useCallback(
-    async (currentPage: number) => {
-      setLoading(true);
-      try {
-        const res = await fetch(
-          `http://localhost:8000/presencas?date=${localDate}&page=${currentPage}&limit=${limit}`
-        );
-        const data = await res.json();
-        setPresencas(data.presencas || []);
-        setTotal(data.total || 0);
-      } catch (error) {
-        console.error("Erro ao buscar presenças:", error);
-      }
-      setLoading(false);
-    },
-    [localDate]
-  );
+  const fetchPresencas = useCallback(async (currentPage: number) => {
+    setLoading(true);
+    try {
+      const res = await fetch(
+        `http://localhost:8000/presencas?date=${localDate}&page=${currentPage}&limit=${limit}`
+      );
+      const data = await res.json();
+      setPresencas(data.presencas);
+      setTotal(data.total);
+    } catch (error) {
+      console.error("Erro ao buscar presenças:", error);
+    }
+    setLoading(false);
+  }, [localDate, limit]);
 
   useEffect(() => {
     fetchPresencas(page);
@@ -69,14 +59,6 @@ const PresencaTable: React.FC = () => {
 
   const totalPages = Math.ceil(total / limit);
 
-  // Helpers
-  const msToSec = (ms?: number) =>
-    typeof ms === "number" ? (ms / 1000).toFixed(3) : "-";
-
-  const showCaptura = presencas.some((p) => typeof p.t_captura_ms_frame === "number");
-  const showDeteccao = presencas.some((p) => typeof p.t_deteccao_ms_frame === "number");
-  const showRecon = presencas.some((p) => typeof p.t_reconhecimento_ms === "number");
-
   return (
     <div style={{ padding: "20px", fontFamily: "Roboto, sans-serif" }}>
       <h2>Registros de Presença - {localDate}</h2>
@@ -95,19 +77,7 @@ const PresencaTable: React.FC = () => {
                 <th style={{ border: "1px solid #ccc", padding: "8px" }}>Tags</th>
                 <th style={{ border: "1px solid #ccc", padding: "8px" }}>Início</th>
                 <th style={{ border: "1px solid #ccc", padding: "8px" }}>Fim</th>
-                {/* Em segundos */}
-                {showCaptura && (
-                  <th style={{ border: "1px solid #ccc", padding: "8px" }}>Captura (s)</th>
-                )}
-                {showDeteccao && (
-                  <th style={{ border: "1px solid #ccc", padding: "8px" }}>Detecção (s)</th>
-                )}
-                {showRecon && (
-                  <th style={{ border: "1px solid #ccc", padding: "8px" }}>Reconhecimento (s)</th>
-                )}
-                <th style={{ border: "1px solid #ccc", padding: "8px" }}>
-                  Tempo Processamento (s)
-                </th>
+                <th style={{ border: "1px solid #ccc", padding: "8px" }}>Tempo Processamento (ms)</th>
                 <th style={{ border: "1px solid #ccc", padding: "8px" }}>Ação</th>
               </tr>
             </thead>
@@ -130,26 +100,7 @@ const PresencaTable: React.FC = () => {
                   </td>
                   <td style={{ border: "1px solid #ccc", padding: "8px" }}>{p.inicio}</td>
                   <td style={{ border: "1px solid #ccc", padding: "8px" }}>{p.fim}</td>
-
-                  {showCaptura && (
-                    <td style={{ border: "1px solid #ccc", padding: "8px" }}>
-                      {msToSec(p.t_captura_ms_frame)}
-                    </td>
-                  )}
-                  {showDeteccao && (
-                    <td style={{ border: "1px solid #ccc", padding: "8px" }}>
-                      {msToSec(p.t_deteccao_ms_frame)}
-                    </td>
-                  )}
-                  {showRecon && (
-                    <td style={{ border: "1px solid #ccc", padding: "8px" }}>
-                      {msToSec(p.t_reconhecimento_ms)}
-                    </td>
-                  )}
-
-                  <td style={{ border: "1px solid #ccc", padding: "8px" }}>
-                    {msToSec(p.tempo_processamento)}
-                  </td>
+                  <td style={{ border: "1px solid #ccc", padding: "8px" }}>{p.tempo_processamento}</td>
                   <td style={{ border: "1px solid #ccc", padding: "8px", textAlign: "center" }}>
                     <button
                       onClick={() => deletePresenca(p.id)}
@@ -169,16 +120,7 @@ const PresencaTable: React.FC = () => {
               ))}
             </tbody>
           </table>
-
-          <div
-            style={{
-              marginTop: "10px",
-              display: "flex",
-              justifyContent: "center",
-              alignItems: "center",
-              gap: "10px",
-            }}
-          >
+          <div style={{ marginTop: "10px", display: "flex", justifyContent: "center", alignItems: "center", gap: "10px" }}>
             <button
               onClick={() => setPage((prev) => Math.max(prev - 1, 1))}
               disabled={page === 1}
@@ -193,9 +135,7 @@ const PresencaTable: React.FC = () => {
             >
               Anterior
             </button>
-            <span>
-              Página {page} de {totalPages}
-            </span>
+            <span>Página {page} de {totalPages}</span>
             <button
               onClick={() => setPage((prev) => Math.min(prev + 1, totalPages))}
               disabled={page === totalPages}
